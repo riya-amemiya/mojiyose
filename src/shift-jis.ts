@@ -1,15 +1,8 @@
-/**
- * Shift_JIS codec implemented to the WHATWG Encoding Standard.
- *
- * Both directions are built from the single jis0208 index embedded in
- * `shift-jis-table.ts`, so the mapping is identical in every runtime instead of
- * depending on the host's ICU build. See
- * https://encoding.spec.whatwg.org/#shift_jis-decoder and
- * https://encoding.spec.whatwg.org/#shift_jis-encoder.
- */
+// Shift_JIS codec implemented to the WHATWG Encoding Standard, with both
+// directions driven by the single jis0208 index in `shift-jis-table.ts`.
+// https://encoding.spec.whatwg.org/#shift_jis-decoder
 import { JIS0208_BASE64, JIS0208_LENGTH } from "./shift-jis-table";
 
-/** U+FFFD REPLACEMENT CHARACTER, emitted for byte sequences with no mapping. */
 const REPLACEMENT = 0xfffd;
 
 function base64ToBytes(base64: string): Uint8Array {
@@ -21,8 +14,7 @@ function base64ToBytes(base64: string): Uint8Array {
     }
     return bytes;
   }
-  // Fallback for runtimes without atob (older Node). Reach Buffer through
-  // globalThis so bundlers targeting the browser do not try to polyfill it.
+  // Reach Buffer through globalThis so browser bundlers do not polyfill it.
   const nodeBuffer = (
     globalThis as {
       Buffer?: { from(input: string, encoding: string): Uint8Array };
@@ -34,7 +26,7 @@ function base64ToBytes(base64: string): Uint8Array {
   throw new Error("No base64 decoder is available in this environment");
 }
 
-// Pointer -> code point. A value of 0 means the pointer has no mapping.
+// Pointer to code point; 0 marks a pointer with no mapping.
 const decodeIndex = (() => {
   const bytes = base64ToBytes(JIS0208_BASE64);
   const table = new Uint16Array(JIS0208_LENGTH);
@@ -44,12 +36,11 @@ const decodeIndex = (() => {
   return table;
 })();
 
-// Code point -> pointer, used by the encoder. Built once at module load.
 const encodeIndex = (() => {
   const map = new Map<number, number>();
   for (let pointer = 0; pointer < JIS0208_LENGTH; pointer++) {
-    // The "index Shift_JIS pointer" excludes the range 8272 to 8835 so that
-    // code points duplicated in the index round-trip to one canonical pointer.
+    // The "index Shift_JIS pointer" excludes 8272 to 8835 so that duplicated
+    // code points round-trip to one canonical pointer.
     if (pointer >= 8272 && pointer <= 8835) {
       continue;
     }
@@ -57,7 +48,6 @@ const encodeIndex = (() => {
     if (codePoint === 0) {
       continue;
     }
-    // The first (lowest) pointer for a code point wins.
     if (!map.has(codePoint)) {
       map.set(codePoint, pointer);
     }
@@ -80,8 +70,7 @@ function codeUnitsToString(units: number[]): string {
  * are replaced with U+FFFD, matching the WHATWG decoder's replacement mode.
  */
 export function shiftJisDecode(input: Uint8Array): string {
-  // Every reachable output (ASCII, half-width katakana, the jis0208 index, and
-  // the EUDC private-use area) lives in the BMP, so each is a single code unit.
+  // Every output is in the BMP, so each is a single UTF-16 code unit.
   const units: number[] = [];
   let lead = 0;
   for (let i = 0; i < input.length; i++) {
@@ -127,7 +116,6 @@ export function shiftJisDecode(input: Uint8Array): string {
     }
   }
   if (lead !== 0) {
-    // A lead byte at the end of the input has no trail byte to pair with.
     units.push(REPLACEMENT);
   }
   return codeUnitsToString(units);

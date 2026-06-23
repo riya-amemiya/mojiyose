@@ -6,9 +6,6 @@
 //   Date: 2024-09-18
 //
 // Regenerate with: bun run scripts/generate-table.ts
-//
-// The data is a base64-encoded little-endian Uint16 array indexed by Shift_JIS
-// pointer (0 to 11103). A value of 0 means the pointer has no mapping.
 
 export const JIS0208_LENGTH = 11104;
 

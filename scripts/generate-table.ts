@@ -1,16 +1,5 @@
-/**
- * Generates `src/shift-jis-table.ts` from the canonical WHATWG Encoding
- * Standard `index-jis0208.txt`.
- *
- * The generated module embeds the jis0208 index as a base64-encoded,
- * little-endian Uint16 array indexed by Shift_JIS pointer. A value of 0 marks
- * a pointer with no mapping (U+0000 never appears in the index, so it is a safe
- * sentinel). Both the decoder and the encoder are built from this single table
- * at module load, which keeps the result identical across environments instead
- * of relying on the host's ICU build.
- *
- * Run with: bun run scripts/generate-table.ts
- */
+// Generates `src/shift-jis-table.ts` from the canonical WHATWG
+// `index-jis0208.txt`. Run with: bun run scripts/generate-table.ts
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,8 +10,6 @@ const outputPath = join(here, "..", "src", "shift-jis-table.ts");
 
 const raw = readFileSync(sourcePath, "utf-8");
 
-// Pull the source identifier and date out of the header comments so the
-// generated file records exactly which revision of the index it came from.
 const identifier = /^# Identifier:\s*(\S+)/m.exec(raw)?.[1] ?? "unknown";
 const date = /^# Date:\s*(\S+)/m.exec(raw)?.[1] ?? "unknown";
 
@@ -61,8 +48,7 @@ for (const [pointer, codePoint] of entries) {
   table[pointer] = codePoint;
 }
 
-// Serialize as little-endian bytes so the runtime can rebuild the table
-// deterministically regardless of the host's native endianness.
+// Little-endian bytes so the runtime rebuilds the table the same on any host.
 const bytes = new Uint8Array(length * 2);
 for (let i = 0; i < length; i++) {
   bytes[i * 2] = table[i] & 0xff;
@@ -78,9 +64,6 @@ const output = `// AUTO-GENERATED FILE — do not edit by hand.
 //   Date: ${date}
 //
 // Regenerate with: bun run scripts/generate-table.ts
-//
-// The data is a base64-encoded little-endian Uint16 array indexed by Shift_JIS
-// pointer (0 to ${maxPointer}). A value of 0 means the pointer has no mapping.
 
 export const JIS0208_LENGTH = ${length};
 

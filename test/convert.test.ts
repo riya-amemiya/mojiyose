@@ -71,9 +71,7 @@ describe("convert", () => {
     );
   });
 
-  it("preserves bytes losslessly between the two utf-8 forms", () => {
-    // Not valid UTF-8: a round trip through a string would corrupt this, but
-    // the BOM-only fast path must keep every byte intact.
+  it("preserves invalid UTF-8 bytes between the two utf-8 forms", () => {
     const raw = Uint8Array.of(0x41, 0xff, 0xfe, 0x80, 0x42);
     const withBom = convert(raw, "utf-8", "utf-8-bom");
     expect(Array.from(withBom)).toEqual([0xef, 0xbb, 0xbf, ...raw]);

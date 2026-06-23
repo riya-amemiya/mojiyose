@@ -1,10 +1,3 @@
-/**
- * mojiyose — a tiny, dependency-free converter between Shift_JIS, UTF-8 and
- * UTF-8 without a BOM.
- *
- * The UTF-8 side uses the platform `TextEncoder` / `TextDecoder`; the Shift_JIS
- * side is implemented from the WHATWG jis0208 index in `shift-jis.ts`.
- */
 import {
   type OnUnmappable,
   type ShiftJisEncodeOptions,
@@ -38,7 +31,6 @@ let utf8Decoder: TextDecoder | undefined;
 let utf8Encoder: TextEncoder | undefined;
 
 function utf8Decode(input: Uint8Array): string {
-  // The default decoder strips a leading BOM, so both UTF-8 forms share it.
   utf8Decoder ??= new TextDecoder("utf-8");
   return utf8Decoder.decode(input);
 }

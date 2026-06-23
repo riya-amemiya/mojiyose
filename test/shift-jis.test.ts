@@ -72,9 +72,7 @@ describe("malformed Shift_JIS input", () => {
     expect(shiftJisDecode(Uint8Array.of(0x82))).toBe("�");
   });
 
-  it("replaces an invalid trail byte with U+FFFD", () => {
-    // 0x82 is a valid lead byte; 0x20 (space) is not a valid trail byte, so it
-    // is reprocessed as ASCII after the replacement character.
+  it("reprocesses an ASCII trail byte after the replacement character", () => {
     expect(shiftJisDecode(Uint8Array.of(0x82, 0x20))).toBe("� ");
   });
 });
