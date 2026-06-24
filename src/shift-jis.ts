@@ -1,75 +1,20 @@
 // Shift_JIS codec implemented to the WHATWG Encoding Standard, with both
-// directions driven by the single jis0208 index in `shift-jis-table.ts`.
+// directions driven by the shared jis0208 index in `jis0208.ts`.
 // https://encoding.spec.whatwg.org/#shift_jis-decoder
-import { JIS0208_BASE64, JIS0208_LENGTH } from "./shift-jis-table";
+import type { Codec, EncodeOptions, OnUnmappable } from "./codec";
+import { codeUnitsToString, REPLACEMENT } from "./decode-util";
+import { jis0208DecodeIndex, jis0208ShiftJisEncodeMap } from "./jis0208";
 
-const REPLACEMENT = 0xfffd;
-
-function base64ToBytes(base64: string): Uint8Array {
-  if (typeof atob === "function") {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-  }
-  // Reach Buffer through globalThis so browser bundlers do not polyfill it.
-  const nodeBuffer = (
-    globalThis as {
-      Buffer?: { from(input: string, encoding: string): Uint8Array };
-    }
-  ).Buffer;
-  if (nodeBuffer) {
-    return Uint8Array.from(nodeBuffer.from(base64, "base64"));
-  }
-  throw new Error("No base64 decoder is available in this environment");
-}
-
-// Pointer to code point; 0 marks a pointer with no mapping.
-const decodeIndex = (() => {
-  const bytes = base64ToBytes(JIS0208_BASE64);
-  const table = new Uint16Array(JIS0208_LENGTH);
-  for (let i = 0; i < JIS0208_LENGTH; i++) {
-    table[i] = bytes[i * 2] | (bytes[i * 2 + 1] << 8);
-  }
-  return table;
-})();
-
-const encodeIndex = (() => {
-  const map = new Map<number, number>();
-  for (let pointer = 0; pointer < JIS0208_LENGTH; pointer++) {
-    // The "index Shift_JIS pointer" excludes 8272 to 8835 so that duplicated
-    // code points round-trip to one canonical pointer.
-    if (pointer >= 8272 && pointer <= 8835) {
-      continue;
-    }
-    const codePoint = decodeIndex[pointer];
-    if (codePoint === 0) {
-      continue;
-    }
-    if (!map.has(codePoint)) {
-      map.set(codePoint, pointer);
-    }
-  }
-  return map;
-})();
-
-function codeUnitsToString(units: number[]): string {
-  // Chunked to stay clear of the argument-count limit on String.fromCharCode.
-  const CHUNK = 0x8000;
-  let result = "";
-  for (let i = 0; i < units.length; i += CHUNK) {
-    result += String.fromCharCode.apply(null, units.slice(i, i + CHUNK));
-  }
-  return result;
-}
+export type { OnUnmappable };
+/** Retained for backward compatibility; identical to {@link EncodeOptions}. */
+export type ShiftJisEncodeOptions = EncodeOptions;
 
 /**
  * Decodes a Shift_JIS byte sequence into a string. Bytes that cannot be mapped
  * are replaced with U+FFFD, matching the WHATWG decoder's replacement mode.
  */
 export function shiftJisDecode(input: Uint8Array): string {
+  const decodeIndex = jis0208DecodeIndex();
   // Every output is in the BMP, so each is a single UTF-16 code unit.
   const units: number[] = [];
   let lead = 0;
@@ -90,7 +35,7 @@ export function shiftJisDecode(input: Uint8Array): string {
         continue;
       }
       const codePoint =
-        pointer >= 0 && pointer < JIS0208_LENGTH ? decodeIndex[pointer] : 0;
+        pointer >= 0 && pointer < decodeIndex.length ? decodeIndex[pointer] : 0;
       if (codePoint !== 0) {
         units.push(codePoint);
         continue;
@@ -121,17 +66,6 @@ export function shiftJisDecode(input: Uint8Array): string {
   return codeUnitsToString(units);
 }
 
-/** Controls how the encoder handles characters that Shift_JIS cannot represent. */
-export type OnUnmappable = "replace" | "throw";
-
-export interface ShiftJisEncodeOptions {
-  /**
-   * Behaviour for a character with no Shift_JIS mapping. "replace" (the
-   * default) emits "?" (0x3F); "throw" raises an error.
-   */
-  onUnmappable?: OnUnmappable;
-}
-
 /**
  * Encodes a string into Shift_JIS bytes following the WHATWG encoder, including
  * its special cases for U+00A5, U+203E, U+2212 and half-width katakana.
@@ -140,6 +74,7 @@ export function shiftJisEncode(
   text: string,
   options: ShiftJisEncodeOptions = {},
 ): Uint8Array {
+  const encodeIndex = jis0208ShiftJisEncodeMap();
   const onUnmappable = options.onUnmappable ?? "replace";
   const out: number[] = [];
   for (const character of text) {
@@ -180,3 +115,10 @@ export function shiftJisEncode(
   }
   return Uint8Array.from(out);
 }
+
+/** Shift_JIS (JIS X 0208) as defined by the WHATWG Encoding Standard. */
+export const shiftJis: Codec = {
+  name: "shift_jis",
+  encode: shiftJisEncode,
+  decode: shiftJisDecode,
+};
