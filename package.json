@@ -17,6 +17,10 @@
     "shift_jis",
     "shift-jis",
     "sjis",
+    "euc-jp",
+    "eucjp",
+    "iso-2022-jp",
+    "jis",
     "utf-8",
     "bom",
     "encoding",
@@ -38,6 +42,26 @@
       "require": {
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
+      }
+    },
+    "./euc-jp": {
+      "import": {
+        "types": "./dist/euc-jp.d.mts",
+        "default": "./dist/euc-jp.mjs"
+      },
+      "require": {
+        "types": "./dist/euc-jp.d.cts",
+        "default": "./dist/euc-jp.cjs"
+      }
+    },
+    "./iso-2022-jp": {
+      "import": {
+        "types": "./dist/iso-2022-jp.d.mts",
+        "default": "./dist/iso-2022-jp.mjs"
+      },
+      "require": {
+        "types": "./dist/iso-2022-jp.d.cts",
+        "default": "./dist/iso-2022-jp.cjs"
       }
     },
     "./package.json": "./package.json"
